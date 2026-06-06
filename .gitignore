@@ -1,0 +1,9 @@
+# 生データ（巨大・再取得可能） scripts/download.sh で取得
+/data/raw/
+
+# Node / 検証ツール
+/node_modules/
+/scripts/verify_*.png
+
+# OS
+.DS_Store

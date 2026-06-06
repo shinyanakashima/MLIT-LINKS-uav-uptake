@@ -1,0 +1,14 @@
+{
+  "name": "mlit-links-agri-drone-map",
+  "version": "1.0.0",
+  "private": true,
+  "description": "農業ドローン活用マップ（十勝／北海道）— Project LINKS 無人航空機飛行計画データの可視化",
+  "scripts": {
+    "verify": "node scripts/verify_web.mjs",
+    "serve": "python3 -m http.server --directory web 8000"
+  },
+  "devDependencies": {
+    "@playwright/test": "^1.60.0",
+    "playwright-core": "^1.60.0"
+  }
+}
