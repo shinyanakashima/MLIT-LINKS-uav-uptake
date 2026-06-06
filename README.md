@@ -39,7 +39,7 @@ scripts/
   build_boundaries.py  N03 行政区域 → 簡略化した市区町村境界 GeoJSON 生成
   verify_web.mjs       Playwright によるレンダリング検証
 web/
-  index.html, css/, js/, vendor/   静的サイト本体（Leaflet / Chart.js は同梱）
+  index.html, css/, js/, vendor/   静的サイト本体（MapLibre GL JS / Chart.js は同梱）
   data/                生成済みの軽量データ（このリポジトリに同梱）
     agri_municipalities.json       市区町村別 農業飛行計画 集計
     hokkaido_municipalities.geojson 簡略化境界
@@ -85,7 +85,7 @@ Pages を有効化のうえ `main` への push、または手動実行（workflo
 - 国土交通省 Project LINKS『無人航空機飛行計画データ（2025年度）』
   https://www.geospatial.jp/ckan/dataset/links-mujinkoukuukihikoukeikaku-2025_
 - 国土交通省 国土数値情報（行政区域データ N03, 2025年）
-- 地図タイル: 地理院タイル（淡色地図）
+- 背景地図: 地理院タイル（標準地図 / 衛星写真〔シームレス空中写真〕）
 - ライセンス: 公共データ利用規約（第1.0版, CC BY 4.0 互換）。商用利用可。出典表記が必要。
 
 > 出典：国土交通省 Project LINKS『無人航空機飛行計画データ（2025年度）』を加工して作成

@@ -21,34 +21,58 @@ await new Promise(r => server.listen(0, r));
 const port = server.address().port;
 const url = `http://127.0.0.1:${port}/`;
 
-const browser = await chromium.launch();
+const browser = await chromium.launch({ args: ["--use-gl=swiftshader", "--ignore-gpu-blocklist"] });
 const page = await browser.newPage({ viewport: { width: 1400, height: 900 } });
 const errors = [];
 page.on("pageerror", e => errors.push("PAGEERROR: " + e.message));
-page.on("console", m => { if (m.type() === "error") errors.push("CONSOLE: " + m.text()); });
+page.on("console", m => { if (m.type() === "error") { const t = m.text(); if (!/ERR_CERT|Failed to load resource/.test(t)) errors.push("CONSOLE: " + t); } });
 
-await page.goto(url, { waitUntil: "networkidle", timeout: 30000 }).catch(()=>{});
-await page.waitForTimeout(2500);
+await page.goto(url, { waitUntil: "domcontentloaded", timeout: 30000 }).catch(()=>{});
+// 地図 load 待ち
+await page.waitForFunction(() => !!window.__map, null, { timeout: 20000 }).catch(()=>{});
+await page.waitForTimeout(1500);
 
-const checks = await page.evaluate(() => ({
-  period: document.getElementById("periodBadge")?.textContent,
-  kpiCount: document.querySelectorAll("#kpis .kpi").length,
-  legendRows: document.querySelectorAll("#legend .legend-row").length,
-  monthOptions: document.querySelectorAll("#monthSel option").length,
-  paths: document.querySelectorAll("#map path").length,
-  detailTitle: document.getElementById("detailTitle")?.textContent,
-  canvases: [...document.querySelectorAll("canvas")].map(c => c.id + ":" + (c.width>0)),
-}));
+const checks = await page.evaluate(() => {
+  const m = window.__map;
+  const src = m && m.getSource("muni");
+  const data = src && src._data;
+  return {
+    maplibre: typeof window.maplibregl !== "undefined",
+    canvas: !!document.querySelector(".maplibregl-canvas"),
+    muniFeatures: data ? data.features.length : -1,
+    kpiCount: document.querySelectorAll("#kpis .kpi").length,
+    legendRows: document.querySelectorAll("#legend .legend-row").length,
+    baseButtons: document.querySelectorAll("#baseSeg button").length,
+    layers: m ? ["base-std","base-photo","muni-fill","muni-line"].filter(l => m.getLayer(l)).length : -1,
+    detailTitle: document.getElementById("detailTitle")?.textContent,
+  };
+});
 console.log("CHECKS", JSON.stringify(checks, null, 2));
 
-// click 帯広市-ish: click a map path then read detail
-await page.click("#scopeSeg button[data-scope='hokkaido']");
-await page.waitForTimeout(800);
-const hokPaths = await page.evaluate(() => document.querySelectorAll("#map path").length);
-console.log("hokkaido paths:", hokPaths);
+if (checks.muniFeatures > 0) {
+  const clicked = await page.evaluate(() => {
+    const m = window.__map;
+    const p = m.project([143.20, 42.92]); // 帯広市付近
+    const fs = m.queryRenderedFeatures([p.x, p.y], { layers: ["muni-fill"] });
+    if (!fs.length) return null;
+    m.fire("click", { lngLat: m.unproject([p.x, p.y]), point: p, features: fs });
+    return fs[0].properties.name;
+  });
+  await page.waitForTimeout(400);
+  const afterClick = await page.evaluate(() => document.getElementById("detailTitle").textContent);
+  console.log("clicked feature:", clicked, "-> detailTitle:", afterClick);
 
-await page.screenshot({ path: "scripts/verify_tokachi.png", fullPage: false });
-await page.click("#scopeSeg button[data-scope='tokachi']");
+  await page.click("#baseSeg button[data-base='photo']");
+  await page.waitForTimeout(400);
+  const vis = await page.evaluate(() => ({
+    std: window.__map.getLayoutProperty("base-std", "visibility"),
+    photo: window.__map.getLayoutProperty("base-photo", "visibility"),
+  }));
+  console.log("basemap after switch:", JSON.stringify(vis));
+}
+
+await page.screenshot({ path: "scripts/verify_tokachi.png" });
+await page.click("#scopeSeg button[data-scope='hokkaido']");
 await page.waitForTimeout(800);
 await page.screenshot({ path: "scripts/verify_full.png", fullPage: true });
 

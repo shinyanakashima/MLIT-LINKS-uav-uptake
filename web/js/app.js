@@ -27,12 +27,16 @@ const state = {
   scope: "tokachi",      // "tokachi" | "hokkaido"
   month: "all",          // "all" | "YYYY-MM"
   selection: null,       // null=スコープ集計 / muni record
+  base: "std",           // "std" | "photo"
 };
 
 let META, MUNI, PREF, GEO;
-let map, choro;
+let map, popup, hoveredId = null, mapReady = false;
 const byCity = new Map();           // city -> aggregation record
 let charts = {};
+
+// 地理院タイル（背景地図）
+const GSI_ATTR = '<a href="https://maps.gsi.go.jp/development/ichiran.html" target="_blank" rel="noopener">地理院タイル</a>';
 
 init();
 
@@ -50,10 +54,11 @@ async function init(){
 
   setupMonthSelect();
   setupScopeToggle();
+  setupBaseToggle();
   buildLegend();
-  initMap();
   buildPrefChart();
-  render();
+  initMap();          // 地図準備後に load 内で choropleth を描画
+  render();           // 地図以外（KPI・チャート・詳細）を即時描画
 }
 
 /* ---------- コントロール ---------- */
@@ -73,8 +78,19 @@ function setupScopeToggle(){
       btn.classList.add("active");
       state.scope = btn.dataset.scope;
       state.selection = null;
-      renderChoropleth(true);
+      applyScope();
+      fitScope();
       render();
+    });
+  });
+}
+function setupBaseToggle(){
+  document.querySelectorAll("#baseSeg button").forEach(btn => {
+    btn.addEventListener("click", () => {
+      document.querySelectorAll("#baseSeg button").forEach(b => b.classList.remove("active"));
+      btn.classList.add("active");
+      state.base = btn.dataset.base;
+      setBasemap();
     });
   });
 }
@@ -94,67 +110,163 @@ function buildLegend(){
   });
 }
 
-/* ---------- 地図 ---------- */
-function initMap(){
-  map = L.map("map", { zoomControl: true, scrollWheelZoom: true });
-  L.tileLayer("https://cyberjapandata.gsi.go.jp/xyz/pale/{z}/{x}/{y}.png", {
-    attribution: "地理院タイル",
-    maxZoom: 18,
-  }).addTo(map);
-  renderChoropleth(true);
-}
-
-function inScope(name){
-  if(state.scope === "hokkaido") return true;
-  const f = GEO.features.find(x => x.properties.name === name);
-  return f ? f.properties.is_tokachi : false;
-}
+/* ---------- 地図（MapLibre GL JS + 地理院タイル） ---------- */
 function valueOf(rec){
   if(!rec) return 0;
   return state.month === "all" ? rec.total : (rec.by_month[state.month] || 0);
 }
 
-function renderChoropleth(refit){
-  if(choro){ map.removeLayer(choro); }
-  const feats = GEO.features.filter(f => state.scope === "hokkaido" || f.properties.is_tokachi);
-  choro = L.geoJSON({ type: "FeatureCollection", features: feats }, {
-    style: styleFeature,
-    onEachFeature: (feature, layer) => {
-      const name = feature.properties.name;
-      const rec = byCity.get(name);
-      layer.on({
-        mouseover: e => e.target.setStyle({ weight: 2.4, color: "#11331a" }),
-        mouseout:  e => choro.resetStyle(e.target),
-        click: () => { state.selection = rec || { city: name, total: 0, by_month: {}, aircraft: {}, methods: {}, is_tokachi: feature.properties.is_tokachi }; render(); },
-      });
-      bindTip(layer, name);
-    },
-  }).addTo(map);
-  if(refit){
-    const b = choro.getBounds();
-    if(b.isValid()) map.fitBounds(b, { padding: [20, 20] });
-  }
+// 件数 → 塗り色（step 式）
+function fillColorExpr(){
+  const expr = ["step", ["to-number", ["coalesce", ["get", "v"], 0]], "#eef1ec"];
+  for(let i = 0; i < BREAKS.length; i++){ expr.push(BREAKS[i], COLORS[i]); }
+  return expr;
 }
-function bindTip(layer, name){
-  const rec = byCity.get(name);
-  const v = valueOf(rec);
-  layer.bindTooltip(`${name}：${fmt(v)} 件`, { className: "muni-tip", sticky: true });
+function scopeFilter(){
+  return state.scope === "hokkaido" ? null : ["==", ["get", "is_tokachi"], true];
 }
-function styleFeature(feature){
-  const rec = byCity.get(feature.properties.name);
-  const v = valueOf(rec);
+
+// 集計値 v を注入した FeatureCollection を生成
+function buildFC(){
   return {
-    fillColor: colorFor(v), fillOpacity: 0.82,
-    weight: 1, color: "#ffffff", opacity: 1,
+    type: "FeatureCollection",
+    features: GEO.features.map((f, i) => ({
+      type: "Feature",
+      id: i,
+      properties: {
+        name: f.properties.name,
+        is_tokachi: !!f.properties.is_tokachi,
+        v: valueOf(byCity.get(f.properties.name)),
+      },
+      geometry: f.geometry,
+    })),
   };
 }
-function restyle(){
-  if(!choro) return;
-  choro.setStyle(styleFeature);
-  choro.eachLayer(l => {
-    const name = l.feature.properties.name;
-    l.unbindTooltip(); bindTip(l, name);
+
+function baseStyle(){
+  return {
+    version: 8,
+    sources: {
+      gsi_std: {
+        type: "raster", tileSize: 256, maxzoom: 18, attribution: GSI_ATTR,
+        tiles: ["https://cyberjapandata.gsi.go.jp/xyz/std/{z}/{x}/{y}.png"],
+      },
+      gsi_photo: {
+        type: "raster", tileSize: 256, maxzoom: 18, attribution: GSI_ATTR,
+        tiles: ["https://cyberjapandata.gsi.go.jp/xyz/seamlessphoto/{z}/{x}/{y}.jpg"],
+      },
+    },
+    layers: [
+      { id: "base-std", type: "raster", source: "gsi_std",
+        layout: { visibility: state.base === "std" ? "visible" : "none" } },
+      { id: "base-photo", type: "raster", source: "gsi_photo",
+        layout: { visibility: state.base === "photo" ? "visible" : "none" } },
+    ],
+  };
+}
+
+function initMap(){
+  map = new maplibregl.Map({
+    container: "map",
+    style: baseStyle(),
+    center: [143.2, 43.0],
+    zoom: 7,
+    attributionControl: false,
   });
+  map.addControl(new maplibregl.NavigationControl({ showCompass: false }), "top-left");
+  map.addControl(new maplibregl.AttributionControl({ compact: true }), "bottom-right");
+  popup = new maplibregl.Popup({ closeButton: false, closeOnClick: false, className: "muni-popup" });
+
+  // style.load はスタイル解析完了時に発火（タイル取得の成否に依存しない）
+  map.on("style.load", () => {
+    if (map.getSource("muni")) return;
+    map.addSource("muni", { type: "geojson", data: buildFC() });
+    map.addLayer({
+      id: "muni-fill", type: "fill", source: "muni",
+      paint: { "fill-color": fillColorExpr(), "fill-opacity": 0.78 },
+    });
+    map.addLayer({
+      id: "muni-line", type: "line", source: "muni",
+      paint: {
+        "line-color": "#ffffff",
+        "line-width": ["case", ["boolean", ["feature-state", "hover"], false], 2.6, 0.8],
+      },
+    });
+    applyScope();
+    bindMapEvents();
+    mapReady = true;
+    fitScope();
+    render();
+    window.__map = map;            // 動作確認用フック
+  });
+}
+
+function bindMapEvents(){
+  map.on("mousemove", "muni-fill", e => {
+    if(!e.features.length) return;
+    map.getCanvas().style.cursor = "pointer";
+    const f = e.features[0];
+    if(hoveredId !== null && hoveredId !== f.id){
+      map.setFeatureState({ source: "muni", id: hoveredId }, { hover: false });
+    }
+    hoveredId = f.id;
+    map.setFeatureState({ source: "muni", id: hoveredId }, { hover: true });
+    popup.setLngLat(e.lngLat)
+      .setHTML(`<b>${f.properties.name}</b><br>${fmt(f.properties.v)} 件`)
+      .addTo(map);
+  });
+  map.on("mouseleave", "muni-fill", () => {
+    map.getCanvas().style.cursor = "";
+    if(hoveredId !== null) map.setFeatureState({ source: "muni", id: hoveredId }, { hover: false });
+    hoveredId = null;
+    popup.remove();
+  });
+  map.on("click", "muni-fill", e => {
+    if(!e.features.length) return;
+    const name = e.features[0].properties.name;
+    const rec = byCity.get(name);
+    state.selection = rec || {
+      city: name, total: 0, by_month: {}, aircraft: {},
+      methods: { "夜間":0,"目視外":0,"物件投下":0,"30m未満":0 },
+      is_tokachi: !!e.features[0].properties.is_tokachi,
+    };
+    render();
+  });
+}
+
+function setBasemap(){
+  if(!map) return;
+  map.setLayoutProperty("base-std", "visibility", state.base === "std" ? "visible" : "none");
+  map.setLayoutProperty("base-photo", "visibility", state.base === "photo" ? "visible" : "none");
+}
+
+function applyScope(){
+  if(!mapReady && !(map && map.getLayer("muni-fill"))) return;
+  const f = scopeFilter();
+  map.setFilter("muni-fill", f);
+  map.setFilter("muni-line", f);
+}
+
+// スコープ内フィーチャの bbox に合わせてズーム
+function fitScope(){
+  if(!map) return;
+  const feats = GEO.features.filter(f => state.scope === "hokkaido" || f.properties.is_tokachi);
+  let minX = 180, minY = 90, maxX = -180, maxY = -90;
+  const walk = c => {
+    if(typeof c[0] === "number"){
+      if(c[0] < minX) minX = c[0]; if(c[0] > maxX) maxX = c[0];
+      if(c[1] < minY) minY = c[1]; if(c[1] > maxY) maxY = c[1];
+    } else c.forEach(walk);
+  };
+  feats.forEach(f => walk(f.geometry.coordinates));
+  if(minX <= maxX) map.fitBounds([[minX, minY], [maxX, maxY]], { padding: 24, duration: 600 });
+}
+
+// 集計値の再注入（月・選択変更時）
+function restyle(){
+  if(!mapReady) return;
+  const src = map.getSource("muni");
+  if(src) src.setData(buildFC());
 }
 
 /* ---------- スコープ集計 ---------- */

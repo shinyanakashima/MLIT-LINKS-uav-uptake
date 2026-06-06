@@ -69,7 +69,8 @@ select{
 .kpi.full{grid-column:1/-1}
 
 .map-wrap{position:relative; min-height:560px}
-#map{height:calc(100vh - 200px); min-height:560px; border-radius:12px; border:1px solid var(--line)}
+#map{height:calc(100vh - 200px); min-height:560px; border-radius:12px; border:1px solid var(--line); overflow:hidden}
+.maplibregl-canvas{outline:none}
 .map-caption{
   position:absolute; left:10px; bottom:10px; z-index:500;
   background:rgba(255,255,255,.92); border:1px solid var(--line);
@@ -95,9 +96,11 @@ select{
 .app-footer .small{font-size:11px}
 #attribution{font-weight:700; color:var(--ink)}
 
-.leaflet-tooltip.muni-tip{
-  font-size:12px; font-weight:600; padding:4px 8px; border-radius:6px;
+.muni-popup .maplibregl-popup-content{
+  font-size:12px; padding:6px 10px; border-radius:8px;
+  box-shadow:0 2px 8px rgba(0,0,0,.18); border:1px solid var(--line);
 }
+.muni-popup .maplibregl-popup-content b{color:var(--green-6)}
 
 @media (max-width:1100px){
   .layout{grid-template-columns:1fr}

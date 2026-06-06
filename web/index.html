@@ -6,7 +6,7 @@
 <title>農業ドローン活用マップ（十勝／北海道） | Project LINKS 飛行計画データ</title>
 <meta name="description" content="国土交通省 Project LINKS の無人航空機飛行計画データ（2025年度）から、北海道・十勝の農業（農林水産業）目的ドローン飛行計画を市区町村別に可視化したマップ。申請ベースの参考情報。" />
 <link rel="preconnect" href="https://cyberjapandata.gsi.go.jp" />
-<link rel="stylesheet" href="vendor/leaflet/leaflet.css" />
+<link rel="stylesheet" href="vendor/maplibre/maplibre-gl.css" />
 <link rel="stylesheet" href="css/style.css" />
 </head>
 <body>
@@ -38,6 +38,13 @@
       <div class="control">
         <label class="control-label" for="monthSel">対象月</label>
         <select id="monthSel"><option value="all">全期間（累計）</option></select>
+      </div>
+      <div class="control">
+        <span class="control-label">背景地図</span>
+        <div class="seg" id="baseSeg">
+          <button data-base="std" class="active">標準地図</button>
+          <button data-base="photo">衛星写真</button>
+        </div>
       </div>
       <div class="control">
         <span class="control-label">凡例（計画件数）</span>
@@ -90,7 +97,7 @@
   <p id="attribution">出典：国土交通省 Project LINKS『無人航空機飛行計画データ（2025年度）』を加工して作成</p>
   <p class="small">
     境界データ：国土交通省 国土数値情報（行政区域データ N03, 2025年）を加工して作成 ／
-    地図タイル：地理院タイル（淡色地図）／
+    背景地図：地理院タイル（標準地図／衛星写真）／
     ライセンス：公共データ利用規約（第1.0版, CC BY 4.0 互換）。
     <span id="genStamp"></span>
   </p>
@@ -100,7 +107,7 @@
   </p>
 </footer>
 
-<script src="vendor/leaflet/leaflet.js"></script>
+<script src="vendor/maplibre/maplibre-gl.js"></script>
 <script src="vendor/chart.umd.min.js"></script>
 <script src="js/app.js"></script>
 </body>
