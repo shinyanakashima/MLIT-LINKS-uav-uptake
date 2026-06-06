@@ -96,6 +96,15 @@ select{
 .app-footer .small{font-size:11px}
 #attribution{font-weight:700; color:var(--ink)}
 
+.basemap-ctrl{display:flex; overflow:hidden}
+.basemap-ctrl button{
+  display:block; border:0; background:#fff; cursor:pointer;
+  font-family:inherit; font-size:12px; padding:7px 10px; color:var(--muted);
+  border-left:1px solid var(--line); white-space:nowrap;
+}
+.basemap-ctrl button:first-child{border-left:0}
+.basemap-ctrl button.active{background:var(--green-5); color:#fff; font-weight:700}
+
 .muni-popup .maplibregl-popup-content{
   font-size:12px; padding:6px 10px; border-radius:8px;
   box-shadow:0 2px 8px rgba(0,0,0,.18); border:1px solid var(--line);

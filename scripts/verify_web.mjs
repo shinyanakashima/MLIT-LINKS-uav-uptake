@@ -42,7 +42,8 @@ const checks = await page.evaluate(() => {
     muniFeatures: data ? data.features.length : -1,
     kpiCount: document.querySelectorAll("#kpis .kpi").length,
     legendRows: document.querySelectorAll("#legend .legend-row").length,
-    baseButtons: document.querySelectorAll("#baseSeg button").length,
+    baseButtons: document.querySelectorAll(".basemap-ctrl button").length,
+    baseDefault: window.__map && window.__map.getLayoutProperty("base-photo", "visibility"),
     layers: m ? ["base-std","base-photo","muni-fill","muni-line"].filter(l => m.getLayer(l)).length : -1,
     detailTitle: document.getElementById("detailTitle")?.textContent,
   };
@@ -62,13 +63,13 @@ if (checks.muniFeatures > 0) {
   const afterClick = await page.evaluate(() => document.getElementById("detailTitle").textContent);
   console.log("clicked feature:", clicked, "-> detailTitle:", afterClick);
 
-  await page.click("#baseSeg button[data-base='photo']");
+  await page.click(".basemap-ctrl button[data-base='std']");
   await page.waitForTimeout(400);
   const vis = await page.evaluate(() => ({
     std: window.__map.getLayoutProperty("base-std", "visibility"),
     photo: window.__map.getLayoutProperty("base-photo", "visibility"),
   }));
-  console.log("basemap after switch:", JSON.stringify(vis));
+  console.log("basemap after switch to std:", JSON.stringify(vis));
 }
 
 await page.screenshot({ path: "scripts/verify_tokachi.png" });

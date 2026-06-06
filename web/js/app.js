@@ -27,7 +27,7 @@ const state = {
   scope: "tokachi",      // "tokachi" | "hokkaido"
   month: "all",          // "all" | "YYYY-MM"
   selection: null,       // null=スコープ集計 / muni record
-  base: "std",           // "std" | "photo"
+  base: "photo",         // "photo"=衛星写真（既定） | "std"=標準地図
 };
 
 let META, MUNI, PREF, GEO;
@@ -54,7 +54,6 @@ async function init(){
 
   setupMonthSelect();
   setupScopeToggle();
-  setupBaseToggle();
   buildLegend();
   buildPrefChart();
   initMap();          // 地図準備後に load 内で choropleth を描画
@@ -84,15 +83,29 @@ function setupScopeToggle(){
     });
   });
 }
-function setupBaseToggle(){
-  document.querySelectorAll("#baseSeg button").forEach(btn => {
-    btn.addEventListener("click", () => {
-      document.querySelectorAll("#baseSeg button").forEach(b => b.classList.remove("active"));
-      btn.classList.add("active");
-      state.base = btn.dataset.base;
-      setBasemap();
+// 地図上の背景地図切替コントロール（MapLibre カスタムコントロール）
+class BasemapControl {
+  onAdd(map){
+    this._map = map;
+    const c = document.createElement("div");
+    c.className = "maplibregl-ctrl maplibregl-ctrl-group basemap-ctrl";
+    [["photo","衛星写真"], ["std","標準地図"]].forEach(([base, label]) => {
+      const b = document.createElement("button");
+      b.type = "button"; b.textContent = label; b.dataset.base = base;
+      if(base === state.base) b.classList.add("active");
+      b.addEventListener("click", () => setBase(base));
+      c.appendChild(b);
     });
-  });
+    this._el = c;
+    return c;
+  }
+  onRemove(){ this._el.remove(); this._map = undefined; }
+}
+function setBase(base){
+  state.base = base;
+  setBasemap();
+  document.querySelectorAll(".basemap-ctrl button").forEach(b =>
+    b.classList.toggle("active", b.dataset.base === base));
 }
 function buildLegend(){
   const el = document.getElementById("legend");
@@ -174,6 +187,7 @@ function initMap(){
     attributionControl: false,
   });
   map.addControl(new maplibregl.NavigationControl({ showCompass: false }), "top-left");
+  map.addControl(new BasemapControl(), "top-right");
   map.addControl(new maplibregl.AttributionControl({ compact: true }), "bottom-right");
   popup = new maplibregl.Popup({ closeButton: false, closeOnClick: false, className: "muni-popup" });
 
