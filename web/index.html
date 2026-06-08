@@ -12,35 +12,41 @@
 <body>
 <header class="app-header">
   <div class="title-wrap">
-    <h1>農業ドローン活用マップ</h1>
-    <p class="subtitle">十勝／北海道　—　農林水産業目的の無人航空機 飛行計画（申請）</p>
+    <h1 data-i18n="app_title">農業ドローン活用マップ</h1>
+    <p class="subtitle" data-i18n="app_subtitle">十勝／北海道　—　農林水産業目的の無人航空機 飛行計画（申請）</p>
   </div>
-  <div class="period-badge" id="periodBadge">対象期間: —</div>
+  <div class="header-right">
+    <div class="seg lang-seg" id="langSeg">
+      <button type="button" data-lang="ja">日本語</button>
+      <button type="button" data-lang="en">EN</button>
+    </div>
+    <div class="period-badge" id="periodBadge">—</div>
+  </div>
 </header>
 
 <div class="notice" role="note">
-  <strong>本マップは飛行「計画（申請）」データであり、実際の飛行・実態を示すものではありません。</strong>
-  紙資料のスキャン→自動抽出によるデータのため、完全性・正確性は保証されません。座標は市区町村重心レベルに秘匿化されています。
+  <strong data-i18n="notice_strong">本マップは飛行「計画（申請）」データであり、実際の飛行・実態を示すものではありません。</strong>
+  <span data-i18n="notice_rest">紙資料のスキャン→自動抽出によるデータのため、完全性・正確性は保証されません。座標は市区町村重心レベルに秘匿化されています。</span>
 </div>
 
 <main class="layout">
   <!-- 左: コントロール + KPI -->
   <aside class="sidebar">
     <section class="card">
-      <h2>表示設定</h2>
+      <h2 data-i18n="disp_settings">表示設定</h2>
       <div class="control">
-        <span class="control-label">表示範囲</span>
+        <span class="control-label" data-i18n="area">表示範囲</span>
         <div class="seg" id="scopeSeg">
-          <button data-scope="tokachi" class="active">十勝管内</button>
-          <button data-scope="hokkaido">北海道全体</button>
+          <button data-scope="tokachi" class="active" data-i18n="scope_tokachi">十勝管内</button>
+          <button data-scope="hokkaido" data-i18n="scope_hokkaido">北海道全体</button>
         </div>
       </div>
       <div class="control">
-        <label class="control-label" for="monthSel">対象月</label>
-        <select id="monthSel"><option value="all">全期間（累計）</option></select>
+        <label class="control-label" for="monthSel" data-i18n="month_label">対象月</label>
+        <select id="monthSel"><option value="all" data-i18n="month_all">全期間（累計）</option></select>
       </div>
       <div class="control">
-        <span class="control-label">凡例（計画件数）</span>
+        <span class="control-label" data-i18n="legend_title">凡例（計画件数）</span>
         <div id="legend" class="legend"></div>
       </div>
     </section>
@@ -48,8 +54,8 @@
     <section class="card kpis" id="kpis"></section>
 
     <section class="card">
-      <h2>都道府県ランキング（全国）</h2>
-      <p class="card-note">農業目的の飛行計画 件数（全期間）。北海道を強調表示。</p>
+      <h2 data-i18n="pref_rank_title">都道府県ランキング（全国）</h2>
+      <p class="card-note" data-i18n="pref_rank_note">農業目的の飛行計画 件数（全期間）。北海道を強調表示。</p>
       <div class="chart-box" style="height:280px"><canvas id="prefChart"></canvas></div>
     </section>
   </aside>
@@ -63,41 +69,36 @@
   <!-- 右: 詳細 + チャート -->
   <aside class="sidebar right">
     <section class="card" id="detailCard">
-      <h2 id="detailTitle">地域サマリー</h2>
+      <h2 id="detailTitle" data-i18n="detail_summary_h">地域サマリー</h2>
       <div id="detailBody"></div>
     </section>
 
     <section class="card">
-      <h2>月別推移</h2>
-      <p class="card-note">新規計画数（計画IDの初出月ベース）。</p>
+      <h2 data-i18n="trend_title">月別推移</h2>
+      <p class="card-note" data-i18n="trend_note">新規計画数（計画IDの初出月ベース）。</p>
       <div class="chart-box" style="height:200px"><canvas id="trendChart"></canvas></div>
     </section>
 
     <section class="card">
-      <h2>機体の種類</h2>
+      <h2 data-i18n="aircraft_title">機体の種類</h2>
       <div class="chart-box" style="height:200px"><canvas id="aircraftChart"></canvas></div>
     </section>
 
     <section class="card">
-      <h2>飛行方法（散布関連の比率）</h2>
-      <p class="card-note">農薬散布等に関わる飛行方法を含む計画の割合（全期間）。</p>
+      <h2 data-i18n="method_title">飛行方法（散布関連の比率）</h2>
+      <p class="card-note" data-i18n="method_note">農薬散布等に関わる飛行方法を含む計画の割合（全期間）。</p>
       <div class="chart-box" style="height:180px"><canvas id="methodChart"></canvas></div>
     </section>
   </aside>
 </main>
 
 <footer class="app-footer">
-  <p id="attribution">出典：国土交通省 Project LINKS『無人航空機飛行計画データ（2025年度）』を加工して作成</p>
+  <p id="attribution" data-i18n="footer_attr">出典：国土交通省 Project LINKS『無人航空機飛行計画データ（2025年度）』を加工して作成</p>
   <p class="small">
-    境界データ：国土交通省 国土数値情報（行政区域データ N03, 2025年）を加工して作成 ／
-    背景地図：地理院タイル（標準地図／衛星写真）／
-    ライセンス：公共データ利用規約（第1.0版, CC BY 4.0 互換）。
+    <span data-i18n="footer_small1"></span>
     <span id="genStamp"></span>
   </p>
-  <p class="small">
-    本データは申請ベースの参考情報です。個人・事業者を特定する二次加工は行っていません。
-    集計方法の詳細は <a href="data/meta.json">meta.json</a> を参照してください。
-  </p>
+  <p class="small" data-i18n-html="footer_small2"></p>
 </footer>
 
 <script src="vendor/maplibre/maplibre-gl.js"></script>

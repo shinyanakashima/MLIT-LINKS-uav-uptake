@@ -72,6 +72,22 @@ if (checks.muniFeatures > 0) {
   console.log("basemap after switch to std:", JSON.stringify(vis));
 }
 
+// 言語切替（EN）
+await page.click("#langSeg button[data-lang='en']");
+await page.waitForTimeout(500);
+const enState = await page.evaluate(() => ({
+  htmlLang: document.documentElement.lang,
+  h1: document.querySelector("h1").textContent,
+  area: document.querySelector('[data-i18n="area"]').textContent,
+  kpiLabel: document.querySelector("#kpis .kpi .l")?.textContent,
+  basemap: document.querySelector(".basemap-ctrl button")?.textContent,
+  monthAll: document.querySelector('#monthSel option[value="all"]').textContent,
+}));
+console.log("EN state:", JSON.stringify(enState));
+await page.screenshot({ path: "scripts/verify_en.png" });
+await page.click("#langSeg button[data-lang='ja']");
+await page.waitForTimeout(300);
+
 await page.screenshot({ path: "scripts/verify_tokachi.png" });
 await page.click("#scopeSeg button[data-scope='hokkaido']");
 await page.waitForTimeout(800);
